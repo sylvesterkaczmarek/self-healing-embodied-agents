@@ -13,7 +13,6 @@ authors = [{name = "Sylvester Kaczmarek"}]
 dependencies = [
   "numpy>=2.0",
   "torch>=2.4",
-  "matplotlib>=3.8",
 ]
 
 [project.optional-dependencies]

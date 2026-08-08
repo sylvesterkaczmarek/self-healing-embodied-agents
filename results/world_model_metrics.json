@@ -1,0 +1,7 @@
+{
+  "seed": 7,
+  "train_samples": 2377,
+  "validation_samples": 595,
+  "validation_mse": 0.004912242293357849,
+  "residual_threshold": 0.21632464230060577
+}

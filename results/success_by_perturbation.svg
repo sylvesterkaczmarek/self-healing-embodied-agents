@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 560" role="img" aria-label="Task success rate by perturbation">
+<rect width="100%" height="100%" fill="white"/>
+<g font-family="Arial, sans-serif" font-size="14" fill="#222">
+<line x1="90" y1="445.0" x2="1065" y2="445.0" stroke="#ddd"/>
+<text x="78" y="450.0" text-anchor="end">0.0</text>
+<line x1="90" y1="363.0" x2="1065" y2="363.0" stroke="#ddd"/>
+<text x="78" y="368.0" text-anchor="end">0.2</text>
+<line x1="90" y1="281.0" x2="1065" y2="281.0" stroke="#ddd"/>
+<text x="78" y="286.0" text-anchor="end">0.4</text>
+<line x1="90" y1="199.0" x2="1065" y2="199.0" stroke="#ddd"/>
+<text x="78" y="204.0" text-anchor="end">0.6</text>
+<line x1="90" y1="117.0" x2="1065" y2="117.0" stroke="#ddd"/>
+<text x="78" y="122.0" text-anchor="end">0.8</text>
+<line x1="90" y1="35.0" x2="1065" y2="35.0" stroke="#ddd"/>
+<text x="78" y="40.0" text-anchor="end">1.0</text>
+<rect x="120.1" y="35.0" width="23.4" height="410.0" fill="#4c78a8"/>
+<rect x="147.9" y="35.0" width="23.4" height="410.0" fill="#f58518"/>
+<rect x="175.8" y="35.0" width="23.4" height="410.0" fill="#54a24b"/>
+<text x="159.6" y="473" text-anchor="middle" transform="rotate(-24 159.6 473)">none</text>
+<rect x="259.4" y="445.0" width="23.4" height="0.0" fill="#4c78a8"/>
+<rect x="287.2" y="35.0" width="23.4" height="410.0" fill="#f58518"/>
+<rect x="315.1" y="35.0" width="23.4" height="410.0" fill="#54a24b"/>
+<text x="298.9" y="473" text-anchor="middle" transform="rotate(-24 298.9 473)">grasp slip</text>
+<rect x="398.7" y="404.0" width="23.4" height="41.0" fill="#4c78a8"/>
+<rect x="426.5" y="35.0" width="23.4" height="410.0" fill="#f58518"/>
+<rect x="454.4" y="35.0" width="23.4" height="410.0" fill="#54a24b"/>
+<text x="438.2" y="473" text-anchor="middle" transform="rotate(-24 438.2 473)">object displacement</text>
+<rect x="537.9" y="445.0" width="23.4" height="0.0" fill="#4c78a8"/>
+<rect x="565.8" y="35.0" width="23.4" height="410.0" fill="#f58518"/>
+<rect x="593.7" y="35.0" width="23.4" height="410.0" fill="#54a24b"/>
+<text x="577.5" y="473" text-anchor="middle" transform="rotate(-24 577.5 473)">transient occlusion</text>
+<rect x="677.2" y="445.0" width="23.4" height="0.0" fill="#4c78a8"/>
+<rect x="705.1" y="35.0" width="23.4" height="410.0" fill="#f58518"/>
+<rect x="732.9" y="35.0" width="23.4" height="410.0" fill="#54a24b"/>
+<text x="716.8" y="473" text-anchor="middle" transform="rotate(-24 716.8 473)">blocked path</text>
+<rect x="816.5" y="390.3" width="23.4" height="54.7" fill="#4c78a8"/>
+<rect x="844.4" y="35.0" width="23.4" height="410.0" fill="#f58518"/>
+<rect x="872.2" y="35.0" width="23.4" height="410.0" fill="#54a24b"/>
+<text x="856.1" y="473" text-anchor="middle" transform="rotate(-24 856.1 473)">stale observation</text>
+<rect x="955.8" y="445.0" width="23.4" height="0.0" fill="#4c78a8"/>
+<rect x="983.7" y="35.0" width="23.4" height="410.0" fill="#f58518"/>
+<rect x="1011.5" y="35.0" width="23.4" height="410.0" fill="#54a24b"/>
+<text x="995.4" y="473" text-anchor="middle" transform="rotate(-24 995.4 473)">compound slip block</text>
+<text x="24" y="240.0" text-anchor="middle" transform="rotate(-90 24 240.0)">Task success rate</text>
+<rect x="615" y="525" width="16" height="16" fill="#4c78a8"/>
+<text x="638" y="538">open loop</text>
+<rect x="765" y="525" width="16" height="16" fill="#f58518"/>
+<text x="788" y="538">reactive replan</text>
+<rect x="915" y="525" width="16" height="16" fill="#54a24b"/>
+<text x="938" y="538">self healing</text>
+</g></svg>
