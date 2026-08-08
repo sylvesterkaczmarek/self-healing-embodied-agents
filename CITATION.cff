@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: Self-Healing Embodied Agents
+message: If you use or adapt this software, please cite this repository.
+type: software
+authors:
+  - family-names: Kaczmarek
+    given-names: Sylvester
+year: 2026
+license: MIT
+repository-code: https://github.com/sylvesterkaczmarek/self-healing-embodied-agents
+url: https://github.com/sylvesterkaczmarek/self-healing-embodied-agents

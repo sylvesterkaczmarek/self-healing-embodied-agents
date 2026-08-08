@@ -1,0 +1,12 @@
+{
+  "world_model": {
+    "seed": 7,
+    "episodes": 700,
+    "epochs": 180
+  },
+  "benchmark": {
+    "seeds": 10,
+    "episodes_per_condition": 3,
+    "action_budget": 7
+  }
+}

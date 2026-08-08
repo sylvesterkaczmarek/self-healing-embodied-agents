@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e .[dev]
+      - run: python scripts/train_world_model.py --episodes 40 --epochs 12 --output artifacts/world_model.pt --metrics results/world_model_metrics.json
+      - run: pytest -q
+      - run: python scripts/smoke_demo.py
