@@ -1,5 +1,7 @@
 # Self-Healing Embodied Agents
 
+![Self-Healing Embodied Agents](assets/social/github-social-card-self-healing-embodied-agents.png)
+
 [![CI](https://github.com/sylvesterkaczmarek/self-healing-embodied-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/sylvesterkaczmarek/self-healing-embodied-agents/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.4%2B-EE4C2C?logo=pytorch&logoColor=white)
