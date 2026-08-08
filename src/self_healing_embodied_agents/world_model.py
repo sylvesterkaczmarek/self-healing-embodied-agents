@@ -8,6 +8,7 @@ from torch import nn
 
 from .types import Action, ActionKind, WorldState
 
+
 ACTION_ORDER = list(ActionKind)
 ACTION_TO_INDEX = {kind: idx for idx, kind in enumerate(ACTION_ORDER)}
 STATE_DIM = 9
@@ -23,10 +24,17 @@ def encode_action(action: Action) -> np.ndarray:
 class TransitionMLP(nn.Module):
     def __init__(self, hidden: int = 64) -> None:
         super().__init__()
-        self.net = nn.Sequential(nn.Linear(STATE_DIM + ACTION_DIM, hidden), nn.SiLU(), nn.Linear(hidden, hidden), nn.SiLU(), nn.Linear(hidden, STATE_DIM))
+        self.net = nn.Sequential(
+            nn.Linear(STATE_DIM + ACTION_DIM, hidden),
+            nn.SiLU(),
+            nn.Linear(hidden, hidden),
+            nn.SiLU(),
+            nn.Linear(hidden, STATE_DIM),
+        )
 
     def forward(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
-        return self.net(torch.cat([state, action], dim=-1))
+        x = torch.cat([state, action], dim=-1)
+        return self.net(x)
 
 
 @dataclass
@@ -54,9 +62,10 @@ class SymbolicCounterfactualModel:
             s.path_blocked = False
         elif action.kind == ActionKind.MOVE_TO_OBJECT and s.object_visible:
             s.ee_xy = s.object_xy.copy()
-        elif action.kind == ActionKind.GRASP and s.object_visible and np.linalg.norm(s.ee_xy - s.object_xy) <= 0.08:
-            s.holding = True
-            s.object_xy = s.ee_xy.copy()
+        elif action.kind == ActionKind.GRASP:
+            if s.object_visible and np.linalg.norm(s.ee_xy - s.object_xy) <= 0.08:
+                s.holding = True
+                s.object_xy = s.ee_xy.copy()
         elif action.kind == ActionKind.MOVE_TO_TARGET and not s.path_blocked:
             s.ee_xy = s.target_xy.copy()
             if s.holding:
