@@ -10,3 +10,7 @@ venv/
 *.log
 build/
 dist/
+runs/
+.ruff_cache/
+.reproduce-*/
+.benchmark-*/

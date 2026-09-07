@@ -2,14 +2,20 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+env:
+  OMP_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,7 +23,38 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: python -m pip install --upgrade pip
-      - run: pip install -e .[dev]
-      - run: python scripts/train_world_model.py --episodes 40 --epochs 12 --output artifacts/world_model.pt --metrics results/world_model_metrics.json
-      - run: pytest -q
-      - run: python scripts/smoke_demo.py
+      - run: python -m pip install torch==2.10.0 --index-url https://download.pytorch.org/whl/cpu
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m pip check
+      - run: python -m pytest -q
+      - name: Exercise training and all benchmark conditions
+        run: |
+          python scripts/train_world_model.py --episodes 40 --epochs 12 --out "$RUNNER_TEMP/smoke"
+          python scripts/run_benchmark.py --model "$RUNNER_TEMP/smoke/artifacts/world_model.pt" --seeds 1 --episodes-per-condition 1 --action-budget 5 --out "$RUNNER_TEMP/smoke/results"
+          python scripts/smoke_demo.py --model "$RUNNER_TEMP/smoke/artifacts/world_model.pt"
+          git diff --exit-code
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip build twine
+      - run: python -m build
+      - run: python -m twine check dist/*
+      - run: python -m pip install torch==2.10.0 --index-url https://download.pytorch.org/whl/cpu
+      - run: python -m pip install dist/*.whl pytest
+      - run: python -m pip check
+      - name: Verify installed wheel outside the checkout
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -c "from pathlib import Path; import self_healing_embodied_agents as p; assert 'site-packages' in Path(p.__file__).parts, p.__file__"
+      - name: Test the shipped source archive and reference demo
+        run: |
+          tar -xzf dist/*.tar.gz -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/self_healing_embodied_agents-0.1.0"
+          python -m pytest -q
+          python scripts/smoke_demo.py
