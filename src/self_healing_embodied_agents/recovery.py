@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from .env import EnvConfig, nominal_actions
 from .types import Action, ActionKind, WorldState
 from .world_model import SymbolicCounterfactualModel
 
@@ -13,17 +14,30 @@ class RecoveryMemory:
     successes: dict[tuple[str, str], int] = field(default_factory=dict)
     attempts: dict[tuple[str, str], int] = field(default_factory=dict)
 
-    def score(self, failure: str, name: str) -> float:
+    def _counts(self, failure: str, name: str) -> tuple[int, int]:
+        if not isinstance(failure, str) or not failure.strip():
+            raise ValueError("failure must be a nonempty string")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("recovery name must be a nonempty string")
         key = (failure, name)
         s = self.successes.get(key, 0)
         n = self.attempts.get(key, 0)
-        return (s + 1.0) / (n + 2.0)
+        if type(s) is not int or type(n) is not int or not 0 <= s <= n:
+            raise ValueError("memory counts must be integers with 0 <= successes <= attempts")
+        return s, n
+
+    def score(self, failure: str, name: str) -> float:
+        s, n = self._counts(failure, name)
+        return (s + 1) / (n + 2)
 
     def update(self, failure: str, name: str, success: bool) -> None:
+        if type(success) is not bool:
+            raise ValueError("success must be a boolean")
+        s, n = self._counts(failure, name)
         key = (failure, name)
-        self.attempts[key] = self.attempts.get(key, 0) + 1
+        self.attempts[key] = n + 1
         if success:
-            self.successes[key] = self.successes.get(key, 0) + 1
+            self.successes[key] = s + 1
 
 
 @dataclass(frozen=True)
@@ -47,10 +61,12 @@ def diagnose(previous: WorldState, observed: WorldState, action: Action, action_
     return "state_divergence"
 
 
-def candidate_recoveries(failure: str, state: WorldState) -> list[RecoveryCandidate]:
+def candidate_recoveries(
+    failure: str, state: WorldState, *, config: EnvConfig | None = None
+) -> list[RecoveryCandidate]:
     retry_from_state = RecoveryCandidate(
         "replan_from_observation",
-        tuple(_nominal_actions(state)),
+        tuple(nominal_actions(state, config)),
     )
     candidates = [retry_from_state]
 
@@ -58,14 +74,16 @@ def candidate_recoveries(failure: str, state: WorldState) -> list[RecoveryCandid
         candidates.append(
             RecoveryCandidate(
                 "refresh_then_replan",
-                (Action(ActionKind.REOBSERVE), *tuple(_nominal_actions(_visible_copy(state)))),
+                (Action(ActionKind.REOBSERVE), *tuple(nominal_actions(_visible_copy(state), config))),
             )
         )
     elif failure == "path_obstruction":
+        cleared = state.copy()
+        cleared.path_blocked = False
         candidates.append(
             RecoveryCandidate(
                 "clear_then_resume",
-                (Action(ActionKind.CLEAR_PATH), Action(ActionKind.MOVE_TO_TARGET), Action(ActionKind.PLACE)),
+                (Action(ActionKind.CLEAR_PATH), *tuple(nominal_actions(cleared, config))),
             )
         )
     elif failure in {"grasp_loss", "object_state_shift", "execution_failure", "state_divergence"}:
@@ -74,10 +92,7 @@ def candidate_recoveries(failure: str, state: WorldState) -> list[RecoveryCandid
                 "reobserve_reacquire_resume",
                 (
                     Action(ActionKind.REOBSERVE),
-                    Action(ActionKind.MOVE_TO_OBJECT),
-                    Action(ActionKind.GRASP),
-                    Action(ActionKind.MOVE_TO_TARGET),
-                    Action(ActionKind.PLACE),
+                    *tuple(nominal_actions(_visible_copy(state), config)),
                 ),
             )
         )
@@ -89,23 +104,6 @@ def _visible_copy(state: WorldState) -> WorldState:
     s = state.copy()
     s.object_visible = True
     return s
-
-
-def _nominal_actions(state: WorldState) -> list[Action]:
-    if state.success:
-        return []
-    if not state.object_visible:
-        return [Action(ActionKind.REOBSERVE)]
-    if state.path_blocked:
-        return [Action(ActionKind.CLEAR_PATH)]
-    if state.holding:
-        return [Action(ActionKind.MOVE_TO_TARGET), Action(ActionKind.PLACE)]
-    return [
-        Action(ActionKind.MOVE_TO_OBJECT),
-        Action(ActionKind.GRASP),
-        Action(ActionKind.MOVE_TO_TARGET),
-        Action(ActionKind.PLACE),
-    ]
 
 
 def _dedupe(candidates: list[RecoveryCandidate]) -> list[RecoveryCandidate]:
@@ -125,17 +123,42 @@ def choose_recovery(
     candidates: list[RecoveryCandidate],
     *,
     memory: RecoveryMemory | None = None,
+    config: EnvConfig | None = None,
+    remaining_steps: int | None = None,
 ) -> RecoveryCandidate:
-    model = SymbolicCounterfactualModel()
+    """Rank the executable prefix of each plan within the available action budget.
+
+    A partial plan can still be useful: the agent replans from its observation
+    after that plan completes. Ties retain the supplied candidate order.
+    """
+    if not candidates:
+        raise ValueError("at least one recovery candidate is required")
+    model = SymbolicCounterfactualModel(config)
+    available = max(0, model.config.max_steps - state.step_index)
+    if remaining_steps is not None:
+        if type(remaining_steps) is not int or remaining_steps < 0:
+            raise ValueError("remaining_steps must be a nonnegative integer")
+        available = min(available, remaining_steps)
     best: tuple[float, RecoveryCandidate] | None = None
 
     for candidate in candidates:
-        predicted = model.rollout(state, list(candidate.actions))
+        if not isinstance(candidate, RecoveryCandidate):
+            raise ValueError("candidates must contain RecoveryCandidate values")
+        if not isinstance(candidate.name, str) or not candidate.name.strip():
+            raise ValueError("candidate names must be nonempty strings")
+        if not candidate.actions and not state.success:
+            raise ValueError("a recovery candidate must contain an action for an unfinished task")
+        if any(not isinstance(action, Action) for action in candidate.actions):
+            raise ValueError("candidate actions must contain Action values")
+        predicted = model.rollout(state, list(candidate.actions[:available]))
         goal_distance = float(np.linalg.norm(predicted.object_xy - predicted.target_xy))
         terminal_bonus = 3.0 if predicted.success else 0.0
-        efficiency_penalty = 0.07 * len(candidate.actions)
+        executed_steps = predicted.step_index - state.step_index
+        efficiency_penalty = 0.07 * executed_steps
         memory_bonus = 0.0 if memory is None else 0.8 * (memory.score(failure, candidate.name) - 0.5)
         score = terminal_bonus - goal_distance - efficiency_penalty + memory_bonus
+        if not np.isfinite(score):
+            raise FloatingPointError("recovery candidate produced a non-finite score")
         if best is None or score > best[0]:
             best = (score, candidate)
 

@@ -7,166 +7,118 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.4%2B-EE4C2C?logo=pytorch&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-Reproducible experiments on embodied agents that detect when physical execution diverges from expectation, infer a likely failure mode, evaluate recovery candidates and continue the task without restarting from scratch.
+A CPU benchmark for detecting and recovering from unexpected changes during a simulated object-moving task. It compares a fixed action sequence, reactive replanning, learned transition monitoring with recovery planning, and recovery planning with memory.
 
 ## At a glance
 
-The central question is simple: **can an embodied agent recover earlier from silent physical failures by comparing predicted and observed state transitions?**
+The agent predicts the next state before acting, checks what happened, and selects a recovery sequence when an action fails or its prediction differs enough from the observation.
 
 ```mermaid
-flowchart LR
-    A[Goal] --> B[Nominal policy]
-    B --> C[Physical action]
-    C --> D[Observed next state]
-    C --> E[Learned transition model]
-    E --> F[Predicted next state]
-    D --> G{State divergence?}
-    F --> G
-    G -- no --> B
-    G -- yes --> H[Failure diagnosis]
-    H --> I[Counterfactual recovery candidates]
-    I --> J[Select recovery]
-    J --> C
+flowchart TD
+    A[State and next action] --> B[Learned prediction]
+    A --> C[Execute action]
+    C --> D[Observe result]
+    B --> E{Failure or divergence?}
+    D --> E
+    E -- no --> A
+    E -- yes --> F[Diagnose and score recovery plans]
+    F --> A
 ```
 
-The default benchmark is deliberately small enough to reproduce on CPU. It includes a learned one-step transition model, controlled manipulation faults, reactive and open-loop baselines, counterfactual recovery, and an episodic-memory ablation.
+The environment uses discrete skills and synthetic faults. Source code, a ready-to-use model checkpoint, complete episode traces and reproduction settings are included.
 
 ## Results snapshot
 
-The checked-in results come from **840 executed episodes**: 7 conditions × 10 seeds × 3 repetitions × 4 agent variants. Each method sees identical per-episode seeds and perturbations.
+The checked-in reference contains **840 executed episodes**: 7 conditions × 10 root seeds × 3 repetitions × 4 methods. Methods share each root-seed/repetition pair's initial geometry and fault-generation rules. The table covers the **180 fault-condition episodes per method**.
 
-Across the 180 faulted episodes per method:
-
-| Method | Eventual success | Success within 7 actions | Mean actions |
+| Method | Success within 24 actions | Success within 7 actions | Mean actions |
 |---|---:|---:|---:|
-| Open loop | 3.9% | 3.9% | 4.00 |
-| Reactive replan | 100.0% | 66.7% | 6.59 |
-| Self-healing | 100.0% | **82.2%** | **6.46** |
-| Self-healing + memory | 100.0% | 82.2% | 6.63 |
+| Open loop | 5.6% | 5.6% | 4.00 |
+| Reactive replan | 100.0% | 66.7% | 7.02 |
+| Self-healing | 100.0% | 83.3% | 6.72 |
+| Self-healing + memory | 100.0% | 73.3% | 6.92 |
 
-For the self-healing agent, divergence detection achieved **96.7% precision** and **98.3% recall** against known injected failure windows in this synthetic benchmark.
+The self-healing agent completed 150 of 180 fault-condition episodes within seven actions, compared with 120 for reactive replanning. All 30 grasp-slip cases took seven actions for self-healing and eight for reactive replanning. Both methods eventually completed every reference task under the 24-action cap. These results compare their combined monitoring and recovery policies; they do not isolate the learned detector's contribution.
 
-The strongest positive result is bounded-horizon recovery. Reactive replanning eventually solves every faulted episode, but silent failures such as grasp loss are usually discovered one action later. The learned divergence detector often catches them immediately, increasing success within a seven-action budget from 66.7% to 82.2%.
+Adding memory reduced seven-action success from 83.3% to 73.3% and increased mean actions relative to the same agent without memory. This fixed-order ablation provides no overall advantage for memory in the reference run.
 
-The memory ablation is negative. The simple episodic recovery memory does not improve task success or seven-action success and slightly increases mean action count. It remains in the repository because negative ablations are useful evidence about what does not help.
+Self-healing detection had **82.4% pooled precision** (206 matched detections / 250 detections) and **98.1% pooled recall** (206 / 210 injected-fault steps). These scores include explicit action failures and use one-to-one matching within the current or preceding action. They measure the combined detection rule.
 
-![Bounded-horizon recovery by perturbation](results/success_within_7_actions.svg)
+The seven-action column is a reporting cutoff on episodes executed with a 24-action limit. Mean actions include failed episodes. The study uses one trained model and paired evaluation geometries; no confidence interval or claim of general superiority is implied.
 
-The checked-in machine-readable summary is [`results/summary.csv`](results/summary.csv). A full reproduction also writes `results/summary.json` and `results/episodes.csv`.
+![Completion within seven actions by perturbation](results/success_within_7_actions.svg)
+
+See the [episode records](results/episodes.csv), [full traces](results/episodes.jsonl) and [summary](results/summary.csv) for the underlying evidence. These regenerated results supersede the earlier snapshot after corrections to calibration, simulation, replanning and metric accounting.
 
 ## Method
 
-The system separates anomaly detection from recovery planning.
+1. Train a small transition model on nominal trajectories, keeping entire calibration episodes separate from training.
+2. Compare predicted and observed next states using a calibrated residual threshold. Explicit action failures also trigger recovery.
+3. Classify the mismatch and generate a small set of hand-written recovery sequences.
+4. Forecast each sequence using the same nominal skill rules as the simulator, including grasp and placement tolerances and the remaining execution budget.
+5. Score predicted task completion, object distance, action count and optional recovery history.
+6. Execute the selected sequence and record whether it completes, is interrupted or runs out of actions.
 
-1. A small PyTorch transition model is trained on nominal manipulation trajectories.
-2. Before an action, the model predicts the next state.
-3. After execution, the predicted and observed states are compared.
-4. A calibrated residual threshold or explicit execution failure triggers recovery.
-5. The mismatch is mapped to a failure class such as grasp loss, path obstruction or perception loss.
-6. Candidate recovery sequences are rolled forward with a transparent symbolic skill model.
-7. Candidates are scored by predicted completion, remaining goal distance, action cost and, optionally, episodic recovery evidence.
-8. The selected recovery sequence resumes execution from the current state.
+Task completion and completion of a recovery sequence are separate outcomes. A successful re-observation can finish a recovery candidate while the object still needs moving. Every started candidate receives one outcome, including interrupted attempts.
 
-The learned model and counterfactual model are intentionally separate. The learned model provides an empirical divergence signal. The symbolic skill model keeps recovery scoring inspectable and prevents transition-model accuracy from being confused with recovery-policy quality.
+The shared simulation/planning contract prevents the planner from assuming a grasp or placement can succeed when execution would reject it. Replanning skips moves whose destinations are already reached, so repeated alarms cannot trap it into repeating the same completed movement. Invalid states, thresholds and predictions fail clearly, and expired action budgets stop further execution.
 
-See [`docs/method.md`](docs/method.md) for the full method description.
+See [the method](docs/method.md) for equations, detection matching and recovery-memory semantics.
 
-## Perturbations
+## Perturbations and baselines
 
-The benchmark injects six controlled fault families plus a nominal condition:
+Six fault conditions accompany nominal execution: grasp slip, object displacement, temporary occlusion, path obstruction, stale observation, and compound obstruction followed by grasp slip. Temporary occlusion expires after two reads or an explicit re-observation. In the compound condition, slip occurs only after transport succeeds.
 
-- grasp slip during transport
-- object displacement before grasp
-- transient observation loss
-- path obstruction
-- stale observation after object movement
-- compound obstruction and grasp loss
+| Method | Behaviour |
+|---|---|
+| Open loop | Execute the initial skill sequence. |
+| Reactive replan | Replan after an explicitly failed action. |
+| Self-healing | Also react to learned state divergence and score recovery candidates. |
+| Self-healing + memory | Add a candidate-completion history, reset for each evaluation root seed. |
 
-Each failure is recorded with a ground-truth event step so divergence detection can be evaluated against known fault windows.
-
-## Baselines
-
-**Open loop** executes the nominal skill sequence without recovery.
-
-**Reactive replan** replans only after an action explicitly reports failure.
-
-**Self-healing** also reacts to learned state divergence, allowing it to intervene before a later skill reports failure.
-
-**Self-healing + memory** adds a small Beta-Bernoulli recovery-history prior. Its lack of benefit in the current benchmark is reported rather than hidden.
+Faults are triggered by actions, so different methods can encounter different realised event sequences even with the same seed. Ground-truth event steps support evaluation of detection timing.
 
 ## Quick start
+
+Use Python 3.11 or later:
 
 ```bash
 git clone https://github.com/sylvesterkaczmarek/self-healing-embodied-agents.git
 cd self-healing-embodied-agents
-python -m pip install -e .[dev]
-make reproduce
+python -m pip install -e ".[dev]"
+python scripts/smoke_demo.py --perturbation compound_slip_block
 ```
 
-`make reproduce` trains the transition model, runs the complete benchmark, regenerates the result figure and runs the test suite.
-
-For a short recovery trace:
+The demo uses the checked-in checkpoint and prints executed actions, detections and recovery outcomes. To train and reproduce the full experiment in a separate directory:
 
 ```bash
-make demo
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python scripts/reproduce.py \
+  --config configs/reproduce.json --out runs/reproduction
+python -m pytest -q
 ```
 
-## Reproducibility
+`make demo` runs the saved model. `make reproduce` runs the full experiment under `runs/reproduction/` and then tests it. `make train` and `make benchmark` use `runs/local/`. Each command also has `--help`; see [reproduction instructions](docs/reproducibility.md) for checkpoint replay and shorter evaluations.
 
-The default experiment configuration is checked in at [`configs/reproduce.json`](configs/reproduce.json).
+## Evidence and reproducibility
 
-- Python, NumPy and PyTorch seeds are fixed.
-- deterministic PyTorch algorithms are requested during training
-- perturbations use per-episode NumPy generators
-- every episode is exported to CSV
-- aggregate results are exported to CSV and JSON
-- figures are regenerated from machine-readable outputs
-- CI trains a small smoke model, runs tests and executes a recovery demo
+The reference model uses seed 7 with 700 nominal episodes and 180 training epochs. Its training and calibration partitions contain 560 and 140 whole episodes. Evaluation uses ten root seeds and three repetitions, paired across methods and conditions. Memory persists through a fixed condition order within each root seed.
 
-See [`docs/reproducibility.md`](docs/reproducibility.md).
+The checked-in evidence includes:
 
-## Robotics integration
+- [Model checkpoint](artifacts/world_model.pt) and [calibration metrics](results/world_model_metrics.json).
+- [Episode counters](results/episodes.csv) and [complete episode traces](results/episodes.jsonl).
+- [CSV summary](results/summary.csv), [JSON summary](results/summary.json) and generated SVG figures.
+- [Provenance](results/provenance.json) containing effective settings, source/checkpoint hashes, runtime versions and execution order.
 
-The core package has no simulator-specific dependency. Thin adapter boundaries are included under [`adapters/`](adapters/) for connecting the recovery logic to richer robotics environments or policy stacks.
+Invalid seed lists, malformed configuration and nonfinite results are rejected. Undefined metric ratios use JSON `null`. Reproduction stages output before publication and restores previous files if ordinary publication fails. Use separate run directories for concurrent experiments.
 
-The intended next validation step is to map the same interfaces onto a rigid-body benchmark such as ManiSkill or a policy/evaluation stack such as LeRobot, then repeat the perturbation study with image observations and continuous robot actions.
+## Scope and integration
 
-## Repository layout
+This is a two-dimensional tabletop with instantaneous skills, direct state observations and known recovery rules. The study measures behaviour on synthetic faults. It does not establish real-robot safety, general task recovery or performance against large robot policies.
 
-```text
-self-healing-embodied-agents/
-├── adapters/                 # simulator and policy integration boundaries
-├── artifacts/                # generated transition-model artifacts
-├── configs/                  # machine-readable reproduction configuration
-├── docs/                     # method, reproducibility and limitations
-├── experiments/              # experiment notes
-├── results/                  # real CSV, JSON and generated figure outputs
-├── scripts/                  # training, benchmark, demo and reproduction entry points
-├── src/
-│   └── self_healing_embodied_agents/
-│       ├── agents.py         # open-loop, reactive and self-healing agents
-│       ├── benchmark.py      # experiment runner and aggregation
-│       ├── env.py            # controlled manipulation testbed and perturbations
-│       ├── plotting.py       # result figure generation
-│       ├── recovery.py       # diagnosis, candidate generation, memory and scoring
-│       ├── training.py       # deterministic transition-model training
-│       ├── types.py          # states, actions and result records
-│       └── world_model.py    # learned and symbolic world models
-├── tests/
-├── CITATION.cff
-├── LICENSE
-├── Makefile
-├── pyproject.toml
-└── README.md
-```
+The single trained model, paired evaluation geometries and fixed memory order limit the conclusions. Detection includes explicit failure signals, and the seven-action measure is a reporting cutoff on episodes allowed to run for 24 actions. Detailed assumptions are in [limitations](docs/limitations.md).
 
-## What this repository does not claim
-
-This repository does not claim state-of-the-art robot control, real-world deployment safety or general recovery across arbitrary embodied tasks. The default environment is a controlled manipulation testbed rather than a rigid-body simulator, and the injected faults are synthetic.
-
-The purpose is narrower: make state-divergence detection, failure diagnosis, recovery selection, bounded-horizon evaluation and recovery-memory ablation inspectable in one reproducible system.
-
-See [`docs/limitations.md`](docs/limitations.md).
+The [adapter files](adapters/) are protocol sketches for future ManiSkill or LeRobot integration. They require concrete observation, controller and safety implementations before use with a simulator or robot. See [integration requirements](docs/integrations.md).
 
 ## Cite this repository
 

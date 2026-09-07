@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from numbers import Real
 
 import numpy as np
 import torch
 from torch import nn
 
+from .env import EnvConfig, nominal_transition
 from .types import Action, ActionKind, WorldState
-
 
 ACTION_ORDER = list(ActionKind)
 ACTION_TO_INDEX = {kind: idx for idx, kind in enumerate(ACTION_ORDER)}
@@ -23,7 +24,10 @@ def encode_action(action: Action) -> np.ndarray:
 
 class TransitionMLP(nn.Module):
     def __init__(self, hidden: int = 64) -> None:
+        if isinstance(hidden, bool) or not isinstance(hidden, int) or hidden < 1:
+            raise ValueError("hidden must be a positive integer")
         super().__init__()
+        self.hidden = hidden
         self.net = nn.Sequential(
             nn.Linear(STATE_DIM + ACTION_DIM, hidden),
             nn.SiLU(),
@@ -42,43 +46,60 @@ class ModelBundle:
     model: TransitionMLP
     residual_threshold: float
 
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        if (
+            isinstance(self.residual_threshold, bool)
+            or not isinstance(self.residual_threshold, Real)
+            or not np.isfinite(self.residual_threshold)
+            or self.residual_threshold <= 0
+        ):
+            raise ValueError("residual_threshold must be finite and positive")
+        if not isinstance(self.model, TransitionMLP):
+            raise TypeError("model must be a TransitionMLP")
+        if any(not torch.isfinite(value).all() for value in self.model.state_dict().values()):
+            raise ValueError("model contains non-finite parameters")
+
     def predict(self, state: WorldState, action: Action) -> np.ndarray:
-        self.model.eval()
-        with torch.no_grad():
-            s = torch.from_numpy(state.vector()).float().unsqueeze(0)
-            a = torch.from_numpy(encode_action(action)).float().unsqueeze(0)
-            pred = self.model(s, a).squeeze(0).cpu().numpy()
-        return pred.astype(np.float32)
+        self.validate()
+        vector = state.vector()
+        if vector.shape != (STATE_DIM,) or not np.isfinite(vector).all():
+            raise ValueError("state must contain nine finite values")
+        parameter = next(self.model.parameters())
+        modes = [(module, module.training) for module in self.model.modules()]
+        try:
+            self.model.eval()
+            with torch.no_grad():
+                s = torch.as_tensor(vector, device=parameter.device, dtype=parameter.dtype).unsqueeze(0)
+                a = torch.as_tensor(
+                    encode_action(action), device=parameter.device, dtype=parameter.dtype
+                ).unsqueeze(0)
+                prediction = self.model(s, a).squeeze(0)
+                if prediction.shape != (STATE_DIM,) or not torch.isfinite(prediction).all():
+                    raise FloatingPointError("transition model produced an invalid prediction")
+                # NumPy has no bfloat16 type; retain double precision when requested.
+                output_dtype = torch.float64 if prediction.dtype == torch.float64 else torch.float32
+                return prediction.to(device="cpu", dtype=output_dtype).numpy()
+        finally:
+            for module, training in modes:
+                module.training = training
 
 
 class SymbolicCounterfactualModel:
-    """Deterministic nominal skill model used for candidate recovery rollouts."""
+    """Nominal simulator dynamics, without injecting future perturbations."""
+
+    def __init__(self, config: EnvConfig | None = None) -> None:
+        self.config = config if config is not None else EnvConfig()
 
     def transition(self, state: WorldState, action: Action) -> WorldState:
-        s = state.copy()
-        if action.kind == ActionKind.REOBSERVE:
-            s.object_visible = True
-        elif action.kind == ActionKind.CLEAR_PATH:
-            s.path_blocked = False
-        elif action.kind == ActionKind.MOVE_TO_OBJECT and s.object_visible:
-            s.ee_xy = s.object_xy.copy()
-        elif action.kind == ActionKind.GRASP:
-            if s.object_visible and np.linalg.norm(s.ee_xy - s.object_xy) <= 0.08:
-                s.holding = True
-                s.object_xy = s.ee_xy.copy()
-        elif action.kind == ActionKind.MOVE_TO_TARGET and not s.path_blocked:
-            s.ee_xy = s.target_xy.copy()
-            if s.holding:
-                s.object_xy = s.ee_xy.copy()
-        elif action.kind == ActionKind.PLACE and s.holding:
-            s.holding = False
-            s.object_xy = s.ee_xy.copy()
-            s.success = bool(np.linalg.norm(s.object_xy - s.target_xy) <= 0.10)
-        s.step_index += 1
-        return s
+        return nominal_transition(state, action, self.config).state
 
     def rollout(self, state: WorldState, actions: list[Action]) -> WorldState:
         s = state.copy()
         for action in actions:
+            if s.success or s.step_index >= self.config.max_steps:
+                break
             s = self.transition(s, action)
         return s
