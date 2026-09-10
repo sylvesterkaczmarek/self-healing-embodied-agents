@@ -40,6 +40,10 @@ The checked-in reference contains **840 executed episodes**: 7 conditions × 10 
 
 The self-healing agent completed 150 of 180 fault-condition episodes within seven actions, compared with 120 for reactive replanning. All 30 grasp-slip cases took seven actions for self-healing and eight for reactive replanning. Both methods eventually completed every reference task under the 24-action cap. These results compare their combined monitoring and recovery policies; they do not isolate the learned detector's contribution.
 
+The separate controlled study below finds the same task outcomes with continuous
+replanning and simple postcondition checks. The reference advantage over
+failure-only replanning therefore does not establish an advantage from learning.
+
 Adding memory reduced seven-action success from 83.3% to 73.3% and increased mean actions relative to the same agent without memory. This fixed-order ablation provides no overall advantage for memory in the reference run.
 
 Self-healing detection had **82.4% pooled precision** (206 matched detections / 250 detections) and **98.1% pooled recall** (206 / 210 injected-fault steps). These scores include explicit action failures and use one-to-one matching within the current or preceding action. They measure the combined detection rule.
@@ -49,6 +53,50 @@ The seven-action column is a reporting cutoff on episodes executed with a 24-act
 ![Completion within seven actions by perturbation](results/success_within_7_actions.svg)
 
 See the [episode records](results/episodes.csv), [full traces](results/episodes.jsonl) and [summary](results/summary.csv) for the underlying evidence. These regenerated results supersede the earlier snapshot after corrections to calibration, simulation, replanning and metric accounting.
+
+## Controlled comparisons
+
+A [separate pilot](results/comparison-v1/evaluation/summary.json) compares ten
+methods across five training seeds and fourteen counterbalanced histories.
+It includes 14,700 evaluation episodes and 2,940 memory-fitting episodes, with
+disjoint development, fitting and evaluation seeds. Each method has 1,260 fault
+episodes; all methods complete every task within 24 actions.
+
+| Method | Mean actions on fault episodes |
+|---|---:|
+| Failure-only intervention with nominal replanning | 6.9802 |
+| Replan after every observation | 6.6905 |
+| Observable postcondition checks with nominal replanning | 6.6905 |
+| Known nominal analytical residual with nominal replanning | 6.6905 |
+| Learned residual with nominal replanning | 6.6905 |
+| Learned residual with ranked recovery | 6.6905 |
+| Ranked recovery with candidate-completion memory, online | 6.8079 |
+| Ranked recovery with task-outcome memory, online | 6.9754 |
+| Ranked recovery with candidate-completion memory, fitted and frozen | 6.7563 |
+| Ranked recovery with task-outcome memory, fitted and frozen | 6.8151 |
+
+Continuous replanning, postcondition checks, analytical residuals and both
+learned variants without memory match success and action count in every paired
+evaluation case. Earlier observation-based intervention explains the measured
+advantage over failure-only intervention; the learned detector and ranked
+candidate selection add no task-performance benefit in this testbed.
+
+Memory increases mean action count under both protocols. The new task-outcome
+objective is retained as an experimental negative comparison, not the default.
+These results concern this memory design and do not demonstrate embodiment drift.
+
+The learned nominal control saves 0.2897 actions relative to failure-only
+replanning (paired pilot 95% interval 0.2738 to 0.3056). Intervals resample model
+seeds and complete histories, not individual episodes. There are only 42 base
+evaluation geometries; deterministic controls repeated across model seeds are
+shared observations. Zero observed differences do not prove general equivalence.
+The full completion curves, alarm sources, action costs and memory comparisons
+are in the [summary](results/comparison-v1/evaluation/summary.json).
+
+See the [method and reproduction commands](docs/method.md#controlled-comparisons)
+and [study record](results/comparison-v1/study.json). The original reference
+configuration, checkpoint, traces and results remain unchanged. The benchmark
+still uses ideal-state observations and guaranteed symbolic repair skills.
 
 ## Method
 

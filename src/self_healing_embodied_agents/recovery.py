@@ -40,6 +40,44 @@ class RecoveryMemory:
             self.successes[key] = s + 1
 
 
+@dataclass
+class TaskOutcomeMemory:
+    """Task completion credit discounted by actions since candidate selection.
+
+    Every selected candidate receives terminal credit, including candidates
+    interrupted by another recovery. This is outcome credit, not a causal
+    attribution of the eventual task result to any single candidate.
+    """
+
+    reward_sums: dict[tuple[str, str], float] = field(default_factory=dict)
+    attempts: dict[tuple[str, str], int] = field(default_factory=dict)
+
+    def _counts(self, failure: str, name: str) -> tuple[float, int]:
+        if not isinstance(failure, str) or not failure.strip():
+            raise ValueError("failure must be a nonempty string")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("recovery name must be a nonempty string")
+        key = (failure, name)
+        reward, count = self.reward_sums.get(key, 0.0), self.attempts.get(key, 0)
+        if type(count) is not int or not np.isfinite(reward) or not 0 <= reward <= count:
+            raise ValueError("memory requires 0 <= reward sum <= integer attempts")
+        return reward, count
+
+    def score(self, failure: str, name: str) -> float:
+        reward, count = self._counts(failure, name)
+        return (reward + 1) / (count + 2)
+
+    def update(self, failure: str, name: str, success: bool, remaining_actions: int) -> None:
+        if type(success) is not bool:
+            raise ValueError("success must be a boolean")
+        if type(remaining_actions) is not int or remaining_actions < 0:
+            raise ValueError("remaining_actions must be a nonnegative integer")
+        reward, count = self._counts(failure, name)
+        key = (failure, name)
+        self.reward_sums[key] = reward + float(success) / (1 + remaining_actions)
+        self.attempts[key] = count + 1
+
+
 @dataclass(frozen=True)
 class RecoveryCandidate:
     name: str
@@ -122,7 +160,7 @@ def choose_recovery(
     state: WorldState,
     candidates: list[RecoveryCandidate],
     *,
-    memory: RecoveryMemory | None = None,
+    memory: RecoveryMemory | TaskOutcomeMemory | None = None,
     config: EnvConfig | None = None,
     remaining_steps: int | None = None,
 ) -> RecoveryCandidate:
