@@ -1,0 +1,25 @@
+{
+  "reference_commit": "bfbc77386b5e37f20a3c257dc606c7a0104bba0e",
+  "reference_episodes": 840,
+  "replayed_episodes": 840,
+  "counter_mismatches": [],
+  "paired_cases_per_diagnostic": 210,
+  "diagnostic_mismatches": {
+    "always_replan_vs_self_healing": [],
+    "failure_ranked_vs_reactive": []
+  },
+  "memory_fault_episodes_slower": 28,
+  "memory_fault_episodes_faster": 0,
+  "reference_sha256": {
+    "results/episodes.csv": "1611decdb7c681db37c087d0aa5fb80aa9761125cb850be1d7812cf1bc59562d",
+    "results/episodes.jsonl": "42d70cbe9c469f5a1e5d013501ec3f6fbfb0dfbe366b8e59dd49c5a184f398db",
+    "results/provenance.json": "73338f561f75ca1ee567b396f0cb70d7b6b5aff8482e146178b9171505edd282",
+    "results/success_by_perturbation.svg": "9888368f9226797163bd0746da77281a022c1655442017a0cb29eb3b73f36d78",
+    "results/success_within_7_actions.svg": "7249596e0dd1c5abf184103290c8d9cf2ae890d35749850509ebdd99d19839e8",
+    "results/summary.csv": "7821add49db1ea61a4ac3b54390eecc24046e5ecc1d399bf2051e9a4fa932057",
+    "results/summary.json": "ea80f1fe60f6be4e2f3e3d0cfa9db54d76a6bd24a8c88d9b5a859e53404eaf0a",
+    "results/world_model_metrics.json": "16c19c159c0491fb9a9010f69d6be3211c6d4a8f97e0f0492e51af11808b6f69"
+  },
+  "checkpoint_sha256": "55534c2b7befa06e4d35aa012f2115d92bfe32eca0a3e9cb90d4e8aef3c8f7ce",
+  "note": "Historical counters are replayed; additional planning and trigger annotations are not historical trace fields."
+}
