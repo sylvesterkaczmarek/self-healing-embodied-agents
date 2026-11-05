@@ -59,7 +59,7 @@ class TaskOutcomeMemory:
             raise ValueError("recovery name must be a nonempty string")
         key = (failure, name)
         reward, count = self.reward_sums.get(key, 0.0), self.attempts.get(key, 0)
-        if type(count) is not int or not np.isfinite(reward) or not 0 <= reward <= count:
+        if type(count) is not int or type(reward) not in (int, float) or not np.isfinite(reward) or not 0 <= reward <= count:
             raise ValueError("memory requires 0 <= reward sum <= integer attempts")
         return reward, count
 

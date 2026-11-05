@@ -8,6 +8,7 @@ from itertools import product
 import numpy as np
 
 from .types import EpisodeResult
+from .evidence import validate_episode
 
 
 METHODS = (
@@ -32,7 +33,7 @@ COSTS = (
 )
 
 
-def episode_metrics(result: EpisodeResult | dict) -> dict:
+def episode_metrics(result: EpisodeResult | dict, *, detection_window: int = 1) -> dict:
     """Count actions and alarms from traces, retaining the historical onset window.
 
     Unmatched alarms are temporal matching outcomes, not evidence that an
@@ -41,6 +42,7 @@ def episode_metrics(result: EpisodeResult | dict) -> dict:
     """
     row = ({**result.as_dict(), "event_log": result.event_log}
            if isinstance(result, EpisodeResult) else result)
+    validate_episode(row, detection_window=detection_window)
     trace = row["event_log"]
     transitions = [event for event in trace if event.get("event") == "transition"]
     alarms = [event for event in trace if event.get("event") == "detection"]

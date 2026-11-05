@@ -107,6 +107,7 @@ class OpenLoopAgent(BaseAgent):
     name = "open_loop"
 
     def run_episode(self, env: TabletopManipulationEnv) -> EpisodeResult:
+        self.config.__post_init__()
         state = env.reset()
         steps = 0
         trace: list[dict] = []
@@ -136,6 +137,7 @@ class AlwaysReplanAgent(BaseAgent):
     name = "always_replan"
 
     def run_episode(self, env: TabletopManipulationEnv) -> EpisodeResult:
+        self.config.__post_init__()
         state = env.reset()
         steps = 0
         trace: list[dict] = []
@@ -160,6 +162,7 @@ class ReactiveReplanAgent(BaseAgent):
     name = "reactive_replan"
 
     def run_episode(self, env: TabletopManipulationEnv) -> EpisodeResult:
+        self.config.__post_init__()
         state = env.reset()
         steps = 0
         interventions = 0
@@ -244,10 +247,13 @@ class SelfHealingAgent(BaseAgent):
             raise ValueError("memory requires ranked recovery")
         self.detector = detector
         self.recovery = recovery
+        if memory is not None and not isinstance(memory, (RecoveryMemory, TaskOutcomeMemory)):
+            raise ValueError("memory must be a supported recovery memory")
         self.memory = memory
         self.update_memory = update_memory
         if detector == "learned" and (
-            not np.isfinite(bundle.residual_threshold) or bundle.residual_threshold < 0
+            isinstance(bundle.residual_threshold, bool) or not isinstance(bundle.residual_threshold, (int,float))
+            or not np.isfinite(bundle.residual_threshold) or bundle.residual_threshold < 0
         ):
             raise ValueError("residual threshold must be finite and nonnegative")
         if detector == "learned" and recovery == "ranked":
@@ -258,6 +264,11 @@ class SelfHealingAgent(BaseAgent):
             self.name = f"{detector}_{recovery}"
 
     def run_episode(self, env: TabletopManipulationEnv) -> EpisodeResult:
+        self.config.__post_init__()
+        if self.detector == "learned":
+            threshold = self.bundle.residual_threshold
+            if type(threshold) not in (int, float) or not np.isfinite(threshold) or threshold < 0:
+                raise ValueError("residual threshold must remain finite and nonnegative")
         state = env.reset()
         steps = 0
         interventions = 0

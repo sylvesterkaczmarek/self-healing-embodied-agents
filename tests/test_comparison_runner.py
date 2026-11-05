@@ -36,6 +36,9 @@ def small_study(monkeypatch, tmp_path):
     config["development"] = {
         "training_seeds": [1, 2], "fit_roots": [10, 11], "evaluation_roots": [20, 21],
     }
+    # Both split manifests use the same reduced test-only history design.
+    config["evaluation"]["fit_roots"] = config["evaluation"]["fit_roots"][:2]
+    config["evaluation"]["evaluation_roots"] = config["evaluation"]["evaluation_roots"][:2]
     orders = [["grasp_slip", "compound_slip_block"], ["compound_slip_block", "grasp_slip"]]
     monkeypatch.setattr(runner, "condition_orders", lambda: orders)
     monkeypatch.setattr(runner, "train_transition_model",

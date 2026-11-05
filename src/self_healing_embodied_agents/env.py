@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from collections import deque
 from dataclasses import dataclass
 from numbers import Real
@@ -192,7 +193,7 @@ class TabletopManipulationEnv:
 
     @property
     def events(self) -> list[dict]:
-        return list(self._events)
+        return deepcopy(self._events)
 
     def _emit(
         self, name: str, *, failure: bool = False, step: int | None = None, **payload: object
@@ -204,7 +205,7 @@ class TabletopManipulationEnv:
             **payload,
         }
         self._events.append(event)
-        return event
+        return deepcopy(event)
 
     def _clip(self, xy: np.ndarray) -> np.ndarray:
         return np.clip(xy, self.config.workspace_low, self.config.workspace_high).astype(np.float32)

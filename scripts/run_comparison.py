@@ -11,17 +11,18 @@ from pathlib import Path
 
 import self_healing_embodied_agents
 from self_healing_embodied_agents.agents import AgentConfig, AlwaysReplanAgent, SelfHealingAgent
-from self_healing_embodied_agents.benchmark import episode_seed, run_benchmark, validate_seeds
+from self_healing_embodied_agents.benchmark import episode_seed, run_benchmark
 from self_healing_embodied_agents.comparison import METHODS, episode_metrics, summarize
 from self_healing_embodied_agents.env import PERTURBATIONS, EnvConfig, TabletopManipulationEnv
+from self_healing_embodied_agents.evidence import read_json, validate_study
 from self_healing_embodied_agents.provenance import build_provenance, file_sha256
 from self_healing_embodied_agents.recovery import RecoveryMemory, TaskOutcomeMemory
 from self_healing_embodied_agents.training import save_bundle, train_transition_model
 
 if __package__:
-    from ._common import integer, write_json
+    from ._common import write_json
 else:
-    from _common import integer, write_json
+    from _common import write_json
 
 
 def condition_orders() -> list[list[str]]:
@@ -34,32 +35,7 @@ def condition_orders() -> list[list[str]]:
 
 
 def load_study(path: Path) -> dict:
-    config = json.loads(path.read_text())
-    if config.get("schema_version") != 1:
-        raise ValueError("unsupported comparison configuration")
-    for key in ("episodes_per_condition", "max_steps", "bootstrap_samples"):
-        integer(key, config[key])
-    integer("bootstrap_seed", config["bootstrap_seed"], 0, 2**32 - 1)
-    integer("training.episodes", config["training"]["episodes"], 2)
-    integer("training.epochs", config["training"]["epochs"])
-    roots: set[int] = set()
-    model_seeds: set[int] = set()
-    for split in ("development", "evaluation"):
-        settings = config[split]
-        validate_seeds(settings["training_seeds"])
-        if model_seeds.intersection(settings["training_seeds"]):
-            raise ValueError("training seeds must be disjoint between study splits")
-        model_seeds.update(settings["training_seeds"])
-        for key in ("fit_roots", "evaluation_roots"):
-            validate_seeds(settings[key])
-            if len(settings[key]) != len(condition_orders()):
-                raise ValueError("each split needs fourteen independent roots per phase")
-            if roots.intersection(settings[key]):
-                raise ValueError("fit and evaluation root sets must be disjoint")
-            roots.update(settings[key])
-    if config["methods"] != list(METHODS):
-        raise ValueError("configured methods do not match the implemented comparison")
-    return config
+    return validate_study(read_json(path), METHODS, len(condition_orders()))
 
 
 def source_snapshot() -> dict[str, str]:
@@ -86,8 +62,14 @@ def agents_for_history(bundle, config: AgentConfig, fitted: list) -> list:
 
 
 def run_study(config: dict, split: str, output: Path) -> dict:
-    settings = config[split]
     orders = condition_orders()
+    config = validate_study(config, METHODS, len(orders))
+    if split not in ("development", "evaluation"):
+        raise ValueError("unknown study split")
+    output = Path(output)
+    if output.is_symlink() or not output.is_dir() or any(output.iterdir()):
+        raise FileExistsError("study output must be an empty ordinary directory")
+    settings = config[split]
     agent_config = AgentConfig(max_steps=config["max_steps"])
     all_rows: list[dict] = []
     snapshots: list[dict] = []
