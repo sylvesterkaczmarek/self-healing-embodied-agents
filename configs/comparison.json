@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "study": "monitoring-comparisons-v1",
+  "interpretation": "Frozen held-out pilot; no powered confirmatory or physical-robot claim.",
+  "reference_commit": "bfbc77386b5e37f20a3c257dc606c7a0104bba0e",
+  "hypotheses": [
+    "Earlier observable-state intervention can explain the reference gain over failure-only replanning.",
+    "Learned residual monitoring need not outperform simple postconditions or continuous replanning in this ideal-state testbed.",
+    "Candidate-completion memory may increase cost; task-outcome credit is a separately evaluated alternative."
+  ],
+  "primary_outcomes": [
+    "task success under 24 executed actions",
+    "paired capped action cost (executed actions on success; 24 on failure)"
+  ],
+  "secondary_outcomes": [
+    "raw executed actions",
+    "completion curve for reporting cutoffs 1 through 24",
+    "explicit execution failures",
+    "alarm sources and historical onset-window matching",
+    "sensing and clearing actions"
+  ],
+  "sampling_unit": "Crossed model-training seed and complete history; repetitions and conditions remain within each history.",
+  "replication_rationale": "Resource-bounded pilot with five training seeds and fourteen counterbalanced histories; compare development interval half-width with 0.25 action precision target, without changing final sample size or criteria.",
+  "precision_target_actions": 0.25,
+  "training": {
+    "episodes": 700,
+    "epochs": 180
+  },
+  "development": {
+    "training_seeds": [
+      11,
+      13
+    ],
+    "fit_roots": [
+      1100,
+      1101,
+      1102,
+      1103,
+      1104,
+      1105,
+      1106,
+      1107,
+      1108,
+      1109,
+      1110,
+      1111,
+      1112,
+      1113
+    ],
+    "evaluation_roots": [
+      1200,
+      1201,
+      1202,
+      1203,
+      1204,
+      1205,
+      1206,
+      1207,
+      1208,
+      1209,
+      1210,
+      1211,
+      1212,
+      1213
+    ]
+  },
+  "evaluation": {
+    "training_seeds": [
+      17,
+      23,
+      31,
+      43,
+      59
+    ],
+    "fit_roots": [
+      3100,
+      3101,
+      3102,
+      3103,
+      3104,
+      3105,
+      3106,
+      3107,
+      3108,
+      3109,
+      3110,
+      3111,
+      3112,
+      3113
+    ],
+    "evaluation_roots": [
+      3200,
+      3201,
+      3202,
+      3203,
+      3204,
+      3205,
+      3206,
+      3207,
+      3208,
+      3209,
+      3210,
+      3211,
+      3212,
+      3213
+    ]
+  },
+  "episodes_per_condition": 3,
+  "max_steps": 24,
+  "condition_schedule": "14 Williams orders for seven conditions; base [0,1,6,2,5,3,4], cyclic relabelling then reversals.",
+  "memory_protocol": "Cold online memories start empty per model/history; frozen memories fit on a separate root with the same order and never update during evaluation. Cold versus frozen also changes prior experience.",
+  "task_memory_reward": "terminal task success / (1 + executed actions since candidate selection); update at episode end, including interrupted candidates.",
+  "methods": [
+    "always_replan",
+    "failure_nominal",
+    "postcondition_nominal",
+    "analytical_nominal",
+    "learned_nominal",
+    "self_healing",
+    "self_healing_memory",
+    "self_healing_task_memory",
+    "self_healing_memory_frozen",
+    "self_healing_task_memory_frozen"
+  ],
+  "bootstrap_seed": 20260910,
+  "bootstrap_samples": 2000
+}

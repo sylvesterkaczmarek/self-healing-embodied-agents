@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "protocol_commit": "a90bb372ba8d09331942308300535dd45c9f3b9f",
+  "implementation_commit": "4a722c314c97b1389228b7f8454625b77bfae101",
+  "reference_commit": "bfbc77386b5e37f20a3c257dc606c7a0104bba0e",
+  "config_sha256": "c1db17d8daf87c0a12807b94892c0eab9113127dcf76e246e83981b926b82ae3",
+  "development": {
+    "evaluation_episodes": 5880,
+    "fit_episodes": 1176,
+    "precision_checks": [
+      {
+        "method": "learned_nominal",
+        "reference": "failure_nominal",
+        "ci95_half_width_actions": 0.025793650793650785,
+        "meets_descriptive_0_25_action_target": true
+      },
+      {
+        "method": "postcondition_nominal",
+        "reference": "failure_nominal",
+        "ci95_half_width_actions": 0.025793650793650785,
+        "meets_descriptive_0_25_action_target": true
+      },
+      {
+        "method": "analytical_nominal",
+        "reference": "failure_nominal",
+        "ci95_half_width_actions": 0.025793650793650785,
+        "meets_descriptive_0_25_action_target": true
+      },
+      {
+        "method": "learned_nominal",
+        "reference": "postcondition_nominal",
+        "ci95_half_width_actions": 0.0,
+        "meets_descriptive_0_25_action_target": true
+      },
+      {
+        "method": "self_healing",
+        "reference": "learned_nominal",
+        "ci95_half_width_actions": 0.0,
+        "meets_descriptive_0_25_action_target": true
+      },
+      {
+        "method": "self_healing",
+        "reference": "always_replan",
+        "ci95_half_width_actions": 0.0,
+        "meets_descriptive_0_25_action_target": true
+      },
+      {
+        "method": "self_healing_memory",
+        "reference": "self_healing",
+        "ci95_half_width_actions": 0.06746031746031746,
+        "meets_descriptive_0_25_action_target": true
+      },
+      {
+        "method": "self_healing_task_memory",
+        "reference": "self_healing",
+        "ci95_half_width_actions": 0.029761904761904767,
+        "meets_descriptive_0_25_action_target": true
+      },
+      {
+        "method": "self_healing_memory_frozen",
+        "reference": "self_healing",
+        "ci95_half_width_actions": 0.04771825396825344,
+        "meets_descriptive_0_25_action_target": true
+      },
+      {
+        "method": "self_healing_task_memory_frozen",
+        "reference": "self_healing",
+        "ci95_half_width_actions": 0.06746031746031744,
+        "meets_descriptive_0_25_action_target": true
+      }
+    ]
+  },
+  "evaluation": {
+    "evaluation_episodes": 14700,
+    "fit_episodes": 2940,
+    "training_seeds": [
+      17,
+      23,
+      31,
+      43,
+      59
+    ],
+    "histories": 14
+  },
+  "interpretation": "Frozen held-out pilot. The resource-bounded design remains a pilot regardless of development precision. No policy or hyperparameter changes followed development outcomes.",
+  "result": "Simple observation-based controls match learned monitoring and ranked recovery on every paired task outcome; both memory objectives add actions.",
+  "runtime_note": "CPU PyTorch 2.14.0; historical reference provenance used 2.10.0. Original reference counters match; floating residual traces need not be byte-identical.",
+  "published_equivalents": {
+    "note": "Published through the GitHub app. Original local commits remain the experiment provenance; matching Git trees establish identical content despite different commit metadata. The bundle preserves the original protocol and implementation commits.",
+    "protocol": {
+      "commit": "a6129f474c40f8796583408aa1105bf8afd5874d",
+      "tree": "d8c85f20a8ba34b55b63b4e22a1a3274ba024176"
+    },
+    "implementation": {
+      "commit": "bfd65cb2f306aff34262965f641cdf399ea0de67",
+      "tree": "7e1a9f58110f476c860bc1438d10c9669526b619"
+    },
+    "source_bundle": "source.bundle",
+    "source_bundle_sha256": "04e0dde1451b45b020f752ac7b78ed194119953afe68dd9f1bb2b3df6facf7ec"
+  }
+}

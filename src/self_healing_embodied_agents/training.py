@@ -187,8 +187,37 @@ def train_transition_model(
     return ModelBundle(model=model, residual_threshold=threshold), metrics
 
 
+def validate_training_metrics(metrics: TrainingMetrics) -> None:
+    """Validate declared calibration evidence; zero episode counts denote legacy unspecified splits."""
+    from .evidence import finite, integer
+    if not isinstance(metrics, TrainingMetrics):
+        raise ValueError("metrics must be TrainingMetrics")
+    integer(metrics.seed, "seed", 0, 2**32-1)
+    for name in ("train_samples", "validation_samples", "epochs"):
+        integer(getattr(metrics, name), name, 1)
+    for name in ("train_episodes", "validation_episodes"):
+        integer(getattr(metrics, name), name)
+    finite(metrics.validation_mse, "validation_mse", 0)
+    for name in ("learning_rate", "residual_threshold", "calibration_multiplier", "calibration_floor"):
+        if finite(getattr(metrics, name), name, 0) <= 0:
+            raise ValueError(f"{name} must be positive")
+    finite(metrics.calibration_quantile,"calibration_quantile",0,1)
+    groups = []
+    for name in ("train", "validation"):
+        ids = getattr(metrics, name+"_episode_ids")
+        if type(ids) is not list or len(ids) != getattr(metrics,name+"_episodes"):
+            raise ValueError("episode partition count mismatch")
+        for value in ids: integer(value,"episode id")
+        if len(set(ids)) != len(ids): raise ValueError("duplicate episode ids")
+        groups.append(set(ids))
+    if groups[0] & groups[1]: raise ValueError("training/calibration episode overlap")
+    if any(groups) and (not all(groups) or sorted(groups[0] | groups[1]) != list(range(len(groups[0])+len(groups[1])))):
+        raise ValueError("incomplete training/calibration partition")
+
+
 def save_bundle(bundle: ModelBundle, metrics: TrainingMetrics, path: Path, metrics_path: Path) -> None:
     bundle.validate()
+    validate_training_metrics(metrics)
     if metrics.residual_threshold != bundle.residual_threshold:
         raise ValueError("metrics and bundle residual thresholds must match")
     if metrics.validation_mse < 0:
@@ -276,6 +305,9 @@ def save_bundle(bundle: ModelBundle, metrics: TrainingMetrics, path: Path, metri
 
 
 def load_bundle(path: Path) -> ModelBundle:
+    path = Path(path)
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 64*1024*1024:
+        raise ValueError("checkpoint must be a regular local file within 64 MiB")
     payload = torch.load(path, map_location="cpu", weights_only=True)
     if not isinstance(payload, dict):
         raise ValueError("checkpoint must contain a dictionary")  # noqa: TRY004
@@ -287,6 +319,12 @@ def load_bundle(path: Path) -> ModelBundle:
             raise ValueError(f"checkpoint {name} must be {expected}")
     if version == 1 and payload.get("action_order") != [kind.value for kind in ACTION_ORDER]:
         raise ValueError("checkpoint action_order does not match the action encoding")
+    required = {"state_dict", "residual_threshold", "state_dim", "action_dim"}
+    if version == 1:
+        required |= {"schema_version", "action_order", "hidden", "dtype"}
+    allowed = required | ({"schema_version"} if version == 0 else set())
+    if not required <= payload.keys() or payload.keys() - allowed:
+        raise ValueError("unsupported or missing checkpoint fields")
     state_dict = payload.get("state_dict")
     if not isinstance(state_dict, dict) or not state_dict:
         raise ValueError("checkpoint state_dict must be a non-empty dictionary")

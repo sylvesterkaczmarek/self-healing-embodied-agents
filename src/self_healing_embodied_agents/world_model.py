@@ -64,7 +64,7 @@ class ModelBundle:
 
     def predict(self, state: WorldState, action: Action) -> np.ndarray:
         self.validate()
-        vector = state.vector()
+        vector = state.copy().vector()
         if vector.shape != (STATE_DIM,) or not np.isfinite(vector).all():
             raise ValueError("state must contain nine finite values")
         parameter = next(self.model.parameters())

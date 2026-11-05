@@ -68,3 +68,95 @@ Ground-truth detection units are unique executed steps containing an injected fa
 Precision is pooled matched detections divided by pooled detections. Recall is pooled matched detections divided by pooled injected-fault steps. Explicit action failures contribute to these scores alongside learned residual alarms. Undefined values are JSON `null` and empty CSV cells. The open-loop and reactive baselines do not emit scored detection events, although the reactive baseline responds to explicit action failures. Their precision is undefined, and recall is zero where faults occur, because no events enter this scoring interface. Reactive failure handling is recorded separately in its action/recovery trace.
 
 `success_std` is the descriptive population standard deviation of episode success indicators. Reused initial geometries, paired policies and memory histories make episode rows dependent; that standard deviation is not a confidence interval. The reference uses one trained model, so it does not measure variation over model-training seeds.
+
+## Controlled comparisons
+
+`configs/comparison.json` defines a separate, frozen pilot. The historical reference
+above remains tied to commit `bfbc77386b5e37f20a3c257dc606c7a0104bba0e`.
+The additional controls share the same ideal-state observations, skill execution
+and action limits. Fault labels are used for evaluation only.
+
+| Method | Monitor | Recovery selection |
+|---|---|---|
+| `always_replan` | None; replan after every observation | First nominal action |
+| `failure_nominal` | Explicit execution failure | Nominal plan |
+| `postcondition_nominal` | Execution failure or observed skill endpoint mismatch | Nominal plan |
+| `analytical_nominal` | Execution failure or nominal analytical residual | Nominal plan |
+| `learned_nominal` | Execution failure or learned residual | Nominal plan |
+| `self_healing` | Same learned monitor | Ranked candidates |
+| `self_healing_memory` | Same learned monitor | Ranked candidates with historical memory |
+| `self_healing_task_memory` | Same learned monitor | Ranked candidates with task-outcome memory |
+
+Postconditions check visibility, holding and coordinate endpoints. A tolerance of
+eight float32 epsilons at coordinate scale handles numerical rounding. The
+analytical control uses the simulator's known nominal dynamics and the same
+numerical tolerance for its residual. Neither control models physical sensor
+noise. Learned and analytical residuals retain the historical suppression on
+successful re-observation and clearing actions; postconditions also check those
+actions' observable endpoints.
+
+Detection traces identify `execution_failure`, `residual_only`,
+`postcondition_only` and `analytical_only`. Explicit failed actions are counted
+for every method, including continuous replanning, which emits no detection
+alarms. Matched and unmatched alarms retain the historical onset-window meaning.
+An unmatched alarm does not establish that an intervention was unnecessary.
+`nominal_planner_calls` counts calls to the nominal plan interface; ranked
+selections are counted separately. These counters are not total planning compute.
+
+The experimental task-outcome memory assigns each selected candidate terminal
+credit `task_success / (1 + actions_since_selection)`. It uses the same prior and
+ranking weight as historical memory. Interrupted candidates also receive terminal
+credit, while budget exhaustion and execution errors receive zero. This shared
+outcome credit is not a causal estimate of each candidate's contribution. The
+historical memory and default agent remain available unchanged in behaviour.
+
+Cold online memories start empty for each model/history pair. Two additional
+`_frozen` variants fit their memory on a disjoint geometry root, then evaluate a
+copied memory with updates disabled. Thus cold and frozen variants differ in both
+prior experience and permission to update. Fourteen Williams orders balance all
+seven conditions' positions and directed adjacent pairs. Each order runs three
+repetitions per condition; fit and evaluation histories use the same order.
+
+The held-out pilot crosses five independent model-training seeds with fourteen
+histories, giving 42 evaluation geometry seeds reused across conditions and
+methods. The 14,700 evaluation rows are not independent replications. Paired
+95% percentile intervals resample whole model seeds and histories independently,
+retaining the repetitions, order and fit/evaluation relationship. Five training
+seeds provide limited uncertainty information; this remains a pilot. Development
+uses separate model and geometry seeds, with a descriptive 0.25-action interval
+half-width target and no sample-size adjustment after evaluation.
+
+Primary outcomes are completion under the actual 24-action limit and capped
+action cost: executed steps on success, 24 on failure. Raw action counts and
+completion curves for reporting cutoffs 1 through 24 are also retained. The curves
+do not represent separately executed planning horizons. The testbed provides no
+physical collision, force or damage measurements, and this study makes no
+wall-clock efficiency claim.
+
+Run each command into a new directory:
+
+```bash
+python scripts/run_comparison.py --reference-audit --out runs/reference-audit
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python scripts/run_comparison.py \
+  --split development --out runs/comparison-development
+OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 python scripts/run_comparison.py \
+  --split evaluation --out runs/comparison-evaluation
+```
+
+Each study directory contains its configuration, model checkpoints and calibration
+partitions, source/checkpoint hashes, fitted-memory snapshots, compressed complete
+episode traces and an auditable summary. Existing output paths are refused. A run
+whose source files change or whose frozen memory mutates cannot publish a completed
+summary. The source archive includes the comparison runner and saved evidence.
+
+The study records the original local protocol and implementation commits. Their
+published equivalents have identical Git trees and different commit metadata;
+`study.json` maps both pairs. The compact `source.bundle` preserves the original
+commits. After cloning this repository, recover them with:
+
+```bash
+git fetch results/comparison-v1/source.bundle \
+  refs/heads/archive/comparison-source:refs/heads/comparison-recorded-source
+```
+
+The bundle requires the historical reference commit already present in the clone.

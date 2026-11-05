@@ -13,3 +13,5 @@ __all__ = [
     "load_bundle",
     "train_transition_model",
 ]
+
+__version__ = "0.2.0"
