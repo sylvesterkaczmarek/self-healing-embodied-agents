@@ -77,3 +77,9 @@ The evidence verifier, installed-package procedure and compatibility details are
 in [evidence verification](evidence-verification.md). The candidate targets Python
 3.11-3.14 with CPU PyTorch. The original comparison and reference artifacts remain
 unchanged. Use new run directories and inspect source/runtime provenance.
+
+## Independent release checks
+
+See [independent review](independent-review-2026-11-05.md) for the separate numerical
+reference, complete-trace contracts and exact public-package verification. The
+[release notes](release-0.2.0.md) describe GitHub-only distribution.

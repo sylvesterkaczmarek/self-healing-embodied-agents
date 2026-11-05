@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+
+- Bind recovery outcomes to executed selected actions and corresponding observations/alarms.
+- Validate calibration metadata against the declared deterministic collection protocol.
+- Validate complete provenance and runtime controls before execution.
+- Add a separate direct-tensor calibration, monitoring and crossed-bootstrap reference.
+- Preserve all historical pilot evidence and retain negative findings.
+- Gate GitHub publication on exact-source and public-installed-package verification.
+
 ## 0.2.0rc1
 
 Unpublished candidate, 5 November 2026, based on existing monitoring-comparison PR #2.
@@ -13,4 +22,4 @@ Unpublished candidate, 5 November 2026, based on existing monitoring-comparison 
 - Expand CI to Linux Python 3.11-3.14 and macOS, with a runtime dependency audit.
 - Preserve historical reference/pilot artifacts and explicit negative comparisons.
 
-Independent verification, merge and publication remain pending.
+Historical candidate entry. Superseded by the independently reviewed 0.2.0 release above.

@@ -135,6 +135,7 @@ for module,source in [(package,project/'src/self_healing_embodied_agents'),(scri
         run(["-m", "pytest", "--import-mode=importlib", "-q", str(project / "tests")])
         run(["-m", "scripts.showcase", "--model", str(project/"artifacts/world_model.pt"), "--out", str(root/"showcase")])
         run(["-m", "scripts.verify_comparison", str(project/"results/comparison-v1/evaluation"), "--replay-actions"])
+        run([str(project / "scripts/independent_reference.py"), str(project / "results/comparison-v1/evaluation")])
         report = {
             "status": "PASS",
             "distribution": name,

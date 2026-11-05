@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 permissions:
   contents: read
 concurrency:
@@ -38,6 +39,7 @@ jobs:
         run: |
           python -m scripts.verify_comparison results/comparison-v1/evaluation --replay-actions
           python -m scripts.verify_comparison results/comparison-v1/development --replay-actions
+          python scripts/independent_reference.py results/comparison-v1/evaluation
           python -m scripts.showcase --model artifacts/world_model.pt --out '${{ runner.temp }}/showcase'
       - name: Exercise fresh training and all fault conditions
         if: matrix.python == '3.13'

@@ -12,3 +12,5 @@ global-exclude __pycache__ *.py[cod]
 include LICENSE README.md CITATION.cff CHANGELOG.md requirements-reference.txt
 recursive-include verification *.json *.md
 recursive-include .github/workflows *.yml
+
+recursive-include verification *.json

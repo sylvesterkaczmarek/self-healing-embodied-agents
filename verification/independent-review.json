@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "candidate_commit": "a414e3046f2414ef56611a9de0ce1cc3fd31575a",
+  "original_pr_head": "20aa07dbe76041efa7a37522c6362679607f5457",
+  "version": "0.2.0",
+  "original_candidate_tests": 382,
+  "original_independent_cases": 30,
+  "original_independent_failures": 27,
+  "original_independent_passing_controls": 3,
+  "release_independent_cases": 48,
+  "complete_suite_tests": 430,
+  "original_implementation_audit_cases": 26,
+  "candidate_and_release_reproduction": {
+    "status": "PASS",
+    "complete_episode_records_equal": 17640,
+    "evaluation_episodes": 14700,
+    "fitting_episodes": 2940,
+    "model_tensors_and_calibration_records_equal": 5,
+    "memory_snapshots_equal": 70,
+    "all_numerical_summaries_equal": true,
+    "source_fingerprints_match_final": true,
+    "installed_version_recorded": "0.2.0",
+    "replays_add_independent_samples": false,
+    "scope": "Fresh repaired-release retraining versus independently replayed original candidate in the same environment."
+  },
+  "evaluation_reference": {
+    "status": "PASS",
+    "split": "evaluation",
+    "training_models": 5,
+    "independent_histories": 14,
+    "calibration_transition_predictions": 2960,
+    "monitor_transition_predictions": 75602,
+    "recorded_alarm_scores_checked": 13266,
+    "paired_estimates_and_intervals_checked": 60,
+    "numerical_error_maxima": {
+      "residual_absolute_error": 1.6001301461621154e-07,
+      "calibration_mse_absolute_error": 4.656612873077393e-10,
+      "calibration_threshold_absolute_error": 8.940696716308594e-08
+    },
+    "scope": "Independent nominal-data construction, direct-tensor inference, detector decisions and crossed-bootstrap arithmetic. NumPy/PyTorch primitives remain shared. Does not certify real robots or enlarge the study sample."
+  },
+  "development_reference": {
+    "status": "PASS",
+    "split": "development",
+    "training_models": 2,
+    "independent_histories": 14,
+    "calibration_transition_predictions": 1193,
+    "monitor_transition_predictions": 30081,
+    "recorded_alarm_scores_checked": 5152,
+    "paired_estimates_and_intervals_checked": 60,
+    "numerical_error_maxima": {
+      "residual_absolute_error": 1.2262737164592252e-07,
+      "calibration_mse_absolute_error": 4.656612873077393e-10,
+      "calibration_threshold_absolute_error": 1.7881393432617188e-07
+    },
+    "scope": "Independent nominal-data construction, direct-tensor inference, detector decisions and crossed-bootstrap arithmetic. NumPy/PyTorch primitives remain shared. Does not certify real robots or enlarge the study sample."
+  },
+  "scope": "Separate verification pass using shared numerical libraries; no external certification or physical-system claim."
+}

@@ -9,27 +9,18 @@
 
 A CPU benchmark for detecting and recovering from unexpected changes during a simulated object-moving task. It compares a fixed action sequence, reactive replanning, learned transition monitoring with recovery planning, and recovery planning with memory.
 
-## November implementation candidate
+## Release 0.2.0
 
-Version **0.2.0rc1** is an unpublished candidate on PR #2. Independent review,
-merge and publication are separate next steps. The existing monitoring comparison
-and its negative results remain unchanged.
+The independent release pass checks recovery completion against executed actions,
+rederives calibration partitions/counts, validates declared source/runtime records,
+and rejects changed controls before execution. The full study and negative
+comparisons remain unchanged. See the [independent review](docs/independent-review-2026-11-05.md)
+and [release notes](docs/release-0.2.0.md).
 
-This update validates complete experiment designs, checks episode claims against
-recorded transitions, reconstructs fitting-memory snapshots, and optionally replays
-recorded actions through the local simulator. Invalid configuration, calibration
-metadata and contradictory evidence are rejected. Returned environment events no
-longer expose writable references to the environment's internal records.
-
-```bash
-python -m scripts.verify_comparison results/comparison-v1/evaluation --replay-actions
-python -m scripts.showcase --model artifacts/world_model.pt --out /tmp/healing-showcase-new
-```
-
-The showcase directory must not already exist. The verifier recomputes evidence;
-it does not authenticate a producer or rerun neural training. See the
-[implementation audit](docs/audit-2026-11-05.md) and
-[evidence checks](docs/evidence-verification.md).
+Installable distributions are provided in [GitHub Releases](https://github.com/sylvesterkaczmarek/self-healing-embodied-agents/releases/tag/v0.2.0).
+No PyPI upload is configured or claimed for this release. The source archive
+includes model files, full traces, the complete test suite and a separate
+numerical reference. This remains a synthetic simulator benchmark.
 
 ## At a glance
 
