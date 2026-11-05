@@ -70,3 +70,10 @@ Each root-seed/repetition pair supplies the same initial geometry across conditi
 Training enables deterministic PyTorch algorithms and fixes Python, NumPy and PyTorch seeds. Exact weights and residuals can still differ across package versions, platforms and thread settings. The saved checkpoint enables replay of the recorded model, while source hashes and runtime metadata identify the implementation used for each run.
 
 Input and output validation reject duplicate seeds, malformed settings and nonfinite predictions or metrics. A failed inference stops before the next environment action. Undefined precision or recall is stored as JSON `null`, keeping output parseable by standard JSON readers.
+
+## November candidate
+
+The evidence verifier, installed-package procedure and compatibility details are
+in [evidence verification](evidence-verification.md). The candidate targets Python
+3.11-3.14 with CPU PyTorch. The original comparison and reference artifacts remain
+unchanged. Use new run directories and inspect source/runtime provenance.

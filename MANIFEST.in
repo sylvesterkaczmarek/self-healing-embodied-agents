@@ -8,3 +8,7 @@ recursive-include tests *.py
 include artifacts/world_model.pt
 recursive-include results *.csv *.json *.jsonl *.jsonl.gz *.svg *.pt *.bundle
 global-exclude __pycache__ *.py[cod]
+
+include LICENSE README.md CITATION.cff CHANGELOG.md requirements-reference.txt
+recursive-include verification *.json *.md
+recursive-include .github/workflows *.yml
