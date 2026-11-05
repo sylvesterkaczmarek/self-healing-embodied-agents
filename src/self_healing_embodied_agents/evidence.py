@@ -299,6 +299,8 @@ def validate_episode(row, *, detection_window=1, complete=False):
         ):
             raise ValueError("detection ratio contradicts counters")
     if complete:
+        from .release_contracts import validate_execution
+        validate_execution(row)
         if [e["step"] for e in trace] != sorted(e["step"] for e in trace):
             raise ValueError("complete trace events must follow execution order")
         active = None

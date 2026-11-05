@@ -263,8 +263,21 @@ class SelfHealingAgent(BaseAgent):
         else:
             self.name = f"{detector}_{recovery}"
 
+    def _validate_controls(self) -> None:
+        if type(self.detector) is not str or self.detector not in {"learned", "failure", "postcondition", "analytical"}:
+            raise ValueError("unknown detector")
+        if type(self.recovery) is not str or self.recovery not in {"ranked", "nominal"}:
+            raise ValueError("unknown recovery policy")
+        if type(self.update_memory) is not bool:
+            raise ValueError("update_memory must remain boolean")
+        if self.memory is not None and (not isinstance(self.memory, (RecoveryMemory, TaskOutcomeMemory)) or self.recovery != "ranked"):
+            raise ValueError("memory requires a supported memory type and ranked recovery")
+        if self.detector == "learned" and (self.bundle is None or not callable(getattr(self.bundle, "predict", None))):
+            raise ValueError("learned monitoring requires a predictor")
+
     def run_episode(self, env: TabletopManipulationEnv) -> EpisodeResult:
         self.config.__post_init__()
+        self._validate_controls()
         if self.detector == "learned":
             threshold = self.bundle.residual_threshold
             if type(threshold) not in (int, float) or not np.isfinite(threshold) or threshold < 0:

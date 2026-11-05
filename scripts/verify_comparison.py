@@ -20,6 +20,7 @@ from self_healing_embodied_agents.evidence import (
     finite,
 )
 from self_healing_embodied_agents.env import EnvConfig, TabletopManipulationEnv
+from self_healing_embodied_agents.release_contracts import validate_calibration_protocol, validate_provenance
 from self_healing_embodied_agents.recovery import RecoveryMemory, TaskOutcomeMemory
 from self_healing_embodied_agents.training import (
     TrainingMetrics,
@@ -248,6 +249,7 @@ def verify(directory, *, replay=False):
         raw = read_json(folder / "training_metrics.json")
         metrics = TrainingMetrics(**raw)
         validate_training_metrics(metrics)
+        validate_calibration_protocol(metrics, config["training"])
         if (
             metrics.seed != model
             or metrics.epochs != config["training"]["epochs"]
@@ -258,6 +260,7 @@ def verify(directory, *, replay=False):
         if bundle.residual_threshold != metrics.residual_threshold:
             raise ValueError("calibration threshold differs from checkpoint")
         provenance = read_json(folder / "provenance.json")
+        validate_provenance(provenance)
         if (
             provenance.get("checkpoint_sha256")
             != file_sha256(folder / "world_model.pt")
